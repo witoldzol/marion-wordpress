@@ -33,13 +33,17 @@ resource "aws_instance" "bitnami_instance" {
   vpc_security_group_ids = [aws_security_group.ssh_security_group.id]
 
   root_block_device {
-    volume_size = 8
+    volume_size = 10
     volume_type = "gp2"
     # this will be used for recovery 
     # if ec2 down -> create snapshot -> create ami from snapshot -> run new ec2 from ami
     delete_on_termination = false
     encrypted             = false
   }
+}
+
+resource "aws_eip" "elastic_ip" {
+  instance = aws_instance.bitnami_instance.id
 }
 
 resource "aws_security_group" "ssh_security_group" {
@@ -81,3 +85,6 @@ output "ami" {
   value = data.aws_ami.bitnami-ami.id
 }
 
+output "EIP" {
+  value = aws_eip.elastic_ip.public_ip
+}
