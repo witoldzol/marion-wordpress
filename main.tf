@@ -3,7 +3,9 @@ variable "key_name" {}
 variable "az" {}
 variable "access_key" {}
 variable "secret_key" {}
-variable "volume_id" {}
+variable "volume_id" {} # not used at the moment - placeholder
+variable "m_email" {}
+variable "w_email" {}
 
 provider "aws" {
   region     = var.region
@@ -79,6 +81,41 @@ resource "aws_security_group" "ssh_security_group" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+}
+
+resource "aws_cloudwatch_metric_alarm" "status_check_alarm" {
+  alarm_name          = "wordpress-ec2-status-check-alarm"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "StatusCheckFailed"
+  namespace           = "AWS/EC2"
+  period              = "120"
+  statistic           = "Average"
+  threshold           = "1"
+
+  dimensions = {
+    InstanceId = aws_instance.bitnami_instance.id
+  }
+
+  alarm_description = "Alarm when status check failed"
+
+  alarm_actions = [aws_sns_topic.alarms_topic.arn]
+}
+
+resource "aws_sns_topic" "alarms_topic" {
+  name = "alarms-topic"
+}
+
+resource "aws_sns_topic_subscription" "alarms_topic_subscription" {
+  topic_arn = aws_sns_topic.alarms_topic.arn
+  protocol  = "email"
+  endpoint  = var.m_email
+}
+
+resource "aws_sns_topic_subscription" "alarms_topic_subscription" {
+  topic_arn = aws_sns_topic.alarms_topic.arn
+  protocol  = "email"
+  endpoint  = var.w_email
 }
 
 output "ami" {
