@@ -6,6 +6,7 @@ variable "secret_key" {}
 variable "volume_id" {} # not used at the moment - placeholder
 variable "m_email" {}
 variable "w_email" {}
+variable "current_ami" {}
 
 provider "aws" {
   region     = var.region
@@ -13,22 +14,28 @@ provider "aws" {
   secret_key = var.secret_key
 }
 
-data "aws_ami" "bitnami-ami" {
-  most_recent = true
-  filter {
-    name   = "name"
-    values = ["bitnami-wordpress-*-linux-debian-*"]
-  }
+### AMI ### use only if you want to update
 
-  filter {
-    name   = "architecture"
-    values = ["x86_64"]
-  }
-}
+# data "aws_ami" "bitnami-ami" {
+#   most_recent = true
+#   filter {
+#     name   = "name"
+#     values = ["bitnami-wordpress-*-linux-debian-*"]
+#   }
+#
+#   filter {
+#     name   = "architecture"
+#     values = ["x86_64"]
+#   }
+# }
+#
+# output "ami" {
+#   value = data.aws_ami.bitnami-ami.id
+# }
 
 resource "aws_instance" "bitnami_instance" {
-  # ami                    = aws_ami.myami.id # for recovery only !
-  ami                    = data.aws_ami.bitnami-ami.id
+  ami = var.current_ami
+  # ami                    = data.aws_ami.bitnami-ami.id
   instance_type          = "t2.micro"
   key_name               = var.key_name
   availability_zone      = var.az
@@ -106,21 +113,18 @@ resource "aws_sns_topic" "alarms_topic" {
   name = "alarms-topic"
 }
 
-resource "aws_sns_topic_subscription" "alarms_topic_subscription" {
+resource "aws_sns_topic_subscription" "alarms_topic_subscription_m" {
   topic_arn = aws_sns_topic.alarms_topic.arn
   protocol  = "email"
   endpoint  = var.m_email
 }
 
-resource "aws_sns_topic_subscription" "alarms_topic_subscription" {
+resource "aws_sns_topic_subscription" "alarms_topic_subscription_w" {
   topic_arn = aws_sns_topic.alarms_topic.arn
   protocol  = "email"
   endpoint  = var.w_email
 }
 
-output "ami" {
-  value = data.aws_ami.bitnami-ami.id
-}
 
 output "EIP" {
   value = aws_eip.elastic_ip.public_ip
